@@ -120,6 +120,7 @@ while (true) {
 	 *		Send cyborgs to an ally factory so that it can capture close enemies/neutral
 	 *		Evacuate a factory when a bomb will hit it
 	 *		Refill a bombed factory, the turn after it has been hit
+	 *		Increase production
 	 */
 
 	if( actions.length === 0 ){
