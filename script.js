@@ -112,7 +112,15 @@ while (true) {
 	
 	simulate( _maxEta );
 	
-	// TODO!	
+	/* 
+	 * Possible actions :
+	 *		Support a threatened ally factory
+	 *		Attack a neutral factory to capture it
+	 *		Attack an enemy factory to capture it
+	 *		Send cyborgs to an ally factory so that it can capture close enemies/neutral
+	 *		Evacuate a factory when a bomb will hit it
+	 *		Refill a bombed factory, the turn after it has been hit
+	 */
 
 	if( actions.length === 0 ){
 		actions.push('WAIT');
