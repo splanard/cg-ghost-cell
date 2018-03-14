@@ -172,6 +172,8 @@ while (true) {
 			updateIncomings( f.incomings.allies );
 			updateIncomings( f.incomings.enemies );
 			
+			// Move bombs
+			
 			// Produce new cyborgs
 			if( f.owner !== 0 ){
 				f.cyborgs += f.production;
@@ -312,8 +314,8 @@ while (true) {
 		// Bomb enemy factory actions
 		if( _bombCount > 0 ){
 			for( var j=0; j < _enemyFactories.length; j++ ){
-				if( _enemyBombedFactories.indexOf( _enemyFactories[j] ) < 0 ){
-					var ef = _factories[_enemyFactories[j]];
+				var ef = _factories[_enemyFactories[j]];
+				if( _enemyBombedFactories.indexOf( ef.id ) < 0 && ef.production > 0 ){
 					possibleActions.push({
 						'name': 'bomb enemy',
 						'actionFactory': undefined,
@@ -344,7 +346,7 @@ while (true) {
 		return a.turns - b.turns;
 	});
 	
-	//printErr( stringify( possibleActions ) );
+	printErr( stringify( possibleActions ) );
 	
 	// Resolve actions
 	var actions = [];
@@ -401,9 +403,15 @@ while (true) {
 				break;
 
 			case 'support ally':
-				// TODO!
 				// Find ally actionable factory at distance <= turnsEffect which has enough cyborgs to support
-				// Else, find multiple actionable factories to support the needed amount
+				var actionFactory = findMaxDistanceMinCyborgs( actionableFactories, a.targetFactory, a.turnsEffect, a.cyborgs );
+				if( actionFactory >= 0 ){
+					// Move command
+					actions.push( move( actionFactory, a.targetFactory, a.cyborgs ) );
+					// Remove actionFactory from actionables
+					actionableFactories.splice( actionableFactories.indexOf( actionFactory ), 1 );
+				}
+				// TODO: else, find multiple actionable factories to support the needed amount
 				break;
 		}
 	}
@@ -415,8 +423,15 @@ while (true) {
     print( actions.join(';') );
 }
 
-function findAtDistanceMinCyborgs( list, from, distance, minCyborgs ){
-	// TODO!
+function findMaxDistanceMinCyborgs( list, from, maxDistance, minCyborgs ){
+	var orderedList = list.sort( function(a, b){ return _distances.get(b, from) - _distances.get(a, from); } );
+	for( var i=0; i < orderedList.length; i++ ){
+		var d = _distances.get( orderedList[i], from );
+		if( d <= maxDistance && _factories[orderedList[i]].cyborgs >= minCyborgs ){
+			return orderedList[i];
+		}
+	}
+	return -1;
 }
 
 function findClosest( list, from ){
