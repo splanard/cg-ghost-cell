@@ -202,7 +202,7 @@ while (true) {
 						'targetFactory': f.id,
 						'cyborgs': f.cyborgs,
 						'turnsEffect': count - 1,
-						'score': f.production / f.cyborgs / Math.pow( f.avgDist, 2 )
+						'score': actionScore( f.production, f.cyborgs, f.avgDist )
 					});
 				} else {
 					f.cyborgs = result;
@@ -270,7 +270,7 @@ while (true) {
 						'actionFactory': mf.id,
 						'targetFactory': nf.id,
 						'cyborgs': nf.cyborgs + 1,
-						'score': nf.production / (nf.cyborgs + 1) / Math.pow( d, 2 )
+						'score': actionScore( nf.production, nf.cyborgs + 1, d )
 					});
 				}
 			}
@@ -285,7 +285,7 @@ while (true) {
 						'actionFactory': mf.id,
 						'targetFactory': ef.id,
 						'cyborgs': ef.cyborgs + ef.production + 1,
-						'score': ef.production / (ef.cyborgs + ef.production + 1)/ Math.pow( d, 2 )
+						'score': actionScore( ef.production, ef.cyborgs + ef.production + 1, d  )
 					});
 				}
 			}
@@ -308,7 +308,7 @@ while (true) {
 					'actionFactory': f.id,
 					'targetFactory': undefined,
 					'cyborgs': f.cyborgs,
-					'score': f.production
+					'score': actionScore( f.production, 0, 0 )
 				});
 			}
 			
@@ -326,7 +326,7 @@ while (true) {
 						'actionFactory': undefined,
 						'targetFactory': ef.id,
 						'cyborgs': 0,
-						'score': ef.production / Math.pow( ef.avgDist, 2 )
+						'score': actionScore( ef.production, 0, ef.avgDist )
 					});
 				}
 			}
@@ -338,7 +338,7 @@ while (true) {
 				'name': 'increase production',
 				'actionFactory': f.id,
 				'cyborgs': 10,
-				'score': 1 / 10
+				'score': actionScore( 1, 10, 0 )
 			});
 		}
 		
@@ -351,7 +351,7 @@ while (true) {
 					'actionFactory': f.id,
 					'targetFactory': af.id,
 					'cyborgs': Math.floor( (f.cyborgs - af.cyborgs) / 2 ),
-					'score': 0.01
+					'score': actionScore( 0.01, 0, 0 )
 				});
 			}
 		}
@@ -464,6 +464,12 @@ while (true) {
 		actions.push('WAIT');
 	}
     print( actions.join(';') );
+}
+
+function actionScore( productionGain, cyborgsEngaged, distance ){
+	var cybDen = cyborgsEngaged > 0 ? cyborgsEngaged : 1;
+	var distDen = distance > 0 ? Math.pow( distance, 2 ) : 1;
+	return productionGain / cybDen / distDen;
 }
 
 function findMaxDistanceMinCyborgs( list, from, maxDistance, minCyborgs ){
