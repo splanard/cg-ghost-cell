@@ -279,15 +279,14 @@ while (true) {
 			var d = _distances.get( mf.id, _afterSimEnemyFactories[j] );
 			if( simulation[d] ){
 				var ef = simulation[d][_afterSimEnemyFactories[j]];
-				if( mf.cyborgs > ef.cyborgs + ef.production ){
-					possibleActions.push({
-						'name': 'attack enemy',
-						'actionFactory': mf.id,
-						'targetFactory': ef.id,
-						'cyborgs': ef.cyborgs + ef.production + 1,
-						'score': actionScore( ef.production, ef.cyborgs + ef.production + 1, d  )
-					});
-				}
+				var cybs = Math.min( mf.cyborgs, ef.cyborgs + ef.production + 1 );
+				possibleActions.push({
+					'name': 'attack enemy',
+					'actionFactory': mf.id,
+					'targetFactory': ef.id,
+					'cyborgs': cybs,
+					'score': actionScore( ef.production, cybs, d  )
+				});
 			}
 		}
 	}
