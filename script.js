@@ -150,7 +150,7 @@ while (true) {
 	
 	/* 
 	 * Possible actions :
-	 *	Support a threatened ally factory
+	 *	. Support a threatened ally factory
 	 *	. Attack a neutral factory to capture it
 	 *	. Attack an enemy factory to capture it
 	 *	Send cyborgs to an ally factory so that it can capture close enemies/neutral
@@ -176,6 +176,7 @@ while (true) {
 			updateIncomings( f.incomings.enemies );
 			
 			// Move bombs
+			// TODO!
 			
 			// Produce new cyborgs
 			if( f.owner !== 0 ){
@@ -201,7 +202,7 @@ while (true) {
 						'targetFactory': f.id,
 						'cyborgs': f.cyborgs,
 						'turnsEffect': count - 1,
-						'score': f.production / f.avgDist / f.cyborgs
+						'score': f.production / f.cyborgs / Math.pow( f.avgDist, 2 )
 					});
 				} else {
 					f.cyborgs = result;
@@ -236,7 +237,8 @@ while (true) {
 				}
 			}
 			
-			// TODO: apply bomb explosions !
+			// Bombs explosions
+			// TODO!
 		}
 		simulation[count] = clone( simFactories );
 		count++;
@@ -268,7 +270,7 @@ while (true) {
 						'actionFactory': mf.id,
 						'targetFactory': nf.id,
 						'cyborgs': nf.cyborgs + 1,
-						'score': nf.production / d / (nf.cyborgs + 1)
+						'score': nf.production / (nf.cyborgs + 1) / Math.pow( d, 2 )
 					});
 				}
 			}
@@ -283,7 +285,7 @@ while (true) {
 						'actionFactory': mf.id,
 						'targetFactory': ef.id,
 						'cyborgs': ef.cyborgs + ef.production + 1,
-						'score': ef.production / d / (ef.cyborgs + ef.production + 1)
+						'score': ef.production / (ef.cyborgs + ef.production + 1)/ Math.pow( d, 2 )
 					});
 				}
 			}
@@ -324,7 +326,7 @@ while (true) {
 						'actionFactory': undefined,
 						'targetFactory': ef.id,
 						'cyborgs': 0,
-						'score': ef.production / ef.avgDist
+						'score': ef.production / Math.pow( ef.avgDist, 2 )
 					});
 				}
 			}
@@ -338,6 +340,20 @@ while (true) {
 				'cyborgs': 10,
 				'score': 1 / 10
 			});
+		}
+		
+		// Share cyborgs actions
+		for( var j=0; j < _myFactories.length; j++ ){
+			var af = _factories[_myFactories[j]];
+			if( f.cyborgs > af.cyborgs + 1 ){
+				possibleActions.push({
+					'name': 'split cyborgs',
+					'actionFactory': f.id,
+					'targetFactory': af.id,
+					'cyborgs': Math.floor( (f.cyborgs - af.cyborgs) / 2 ),
+					'score': 0.01
+				});
+			}
 		}
 	}
 	
@@ -409,23 +425,36 @@ while (true) {
 				// TODO!
 				break;
 
+			case 'split cyborgs':
+				// Move command
+				actions.push( move( a.actionFactory, a.targetFactory, a.cyborgs ) );
+				// Remove actionFactory from actionables
+				if( _factories[a.actionFactory].cyborgs === 0 ){
+					actionableFactories.splice( actionableFactories.indexOf( a.actionFactory ), 1 );
+				}
+				break;
+			
 			case 'support ally':
-				// Find ally actionable factory at distance <= turnsEffect which has enough cyborgs to support
-				var otherFactories = actionableFactories.slice();
-				var iotf = otherFactories.indexOf( a.targetFactory );
-				if( iotf >= 0 ){
-					otherFactories.splice( iotf, 1 );
-				}
-				var actionFactory = findMaxDistanceMinCyborgs( otherFactories, a.targetFactory, a.turnsEffect, a.cyborgs );
-				if( actionFactory >= 0 ){
-					// Move command
-					actions.push( move( actionFactory, a.targetFactory, a.cyborgs ) );
-					// Remove actionFactory from actionables
-					if( _factories[actionFactory].cyborgs === 0 ){
-						actionableFactories.splice( actionableFactories.indexOf( actionFactory ), 1 );
+				if( handledTargets.indexOf( a.targetFactory ) < 0 ){
+					// Find ally actionable factory at distance <= turnsEffect which has enough cyborgs to support
+					var otherFactories = actionableFactories.slice();
+					var iotf = otherFactories.indexOf( a.targetFactory );
+					if( iotf >= 0 ){
+						otherFactories.splice( iotf, 1 );
 					}
+					var actionFactory = findMaxDistanceMinCyborgs( otherFactories, a.targetFactory, a.turnsEffect, a.cyborgs );
+					if( actionFactory >= 0 ){
+						// Move command
+						actions.push( move( actionFactory, a.targetFactory, a.cyborgs ) );
+						// Remove actionFactory from actionables
+						if( _factories[actionFactory].cyborgs === 0 ){
+							actionableFactories.splice( actionableFactories.indexOf( actionFactory ), 1 );
+						}
+						// Mark target factory handled
+						handledTargets.push( a.targetFactory );
+					}
+					// TODO: else, find multiple actionable factories to support the needed amount
 				}
-				// TODO: else, find multiple actionable factories to support the needed amount
 				break;
 		}
 	}
