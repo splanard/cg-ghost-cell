@@ -377,10 +377,8 @@ while (true) {
 			case 'attack enemy':
 			case 'capture neutral':
 				if( handledTargets.indexOf( a.targetFactory ) < 0 ){
-					// Better split the cyborgs, if not too risky
-					var nbCyborgs = a.name === 'capture neutral' ? Math.max( a.cyborgs, Math.floor(_factories[a.actionFactory].cyborgs / 2) ) : a.cyborgs;
 					// Move command
-					actions.push( move( a.actionFactory, a.targetFactory, nbCyborgs ) );
+					actions.push( move( a.actionFactory, a.targetFactory, a.cyborgs ) );
 					// Remove actionFactory from actionables
 					if( _factories[a.actionFactory].cyborgs === 0 ){
 						actionableFactories.splice( actionableFactories.indexOf( a.actionFactory ), 1 );
