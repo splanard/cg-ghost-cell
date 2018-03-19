@@ -444,7 +444,7 @@ while (true) {
 
 function actionScore( productionGain, cyborgsEngaged, distance ){
 	var cybDen = cyborgsEngaged > 0 ? cyborgsEngaged : 1;
-	var distDen = distance > 0 ? Math.pow( distance, 2 ) : 1;
+	var distDen = distance > 0 ? distance : 1;
 	return productionGain / cybDen / distDen;
 }
 
