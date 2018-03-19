@@ -319,6 +319,7 @@ while (true) {
 		}
 		
 		// Share cyborgs actions
+		/*
 		for( var j=0; j < _myFactories.length; j++ ){
 			var af = _factories[_myFactories[j]];
 			if( f.cyborgs > af.cyborgs + 1 ){
@@ -331,6 +332,7 @@ while (true) {
 				});
 			}
 		}
+		*/
 	}
 	
 	// Sort possible actions: by desc score, then by asc turns
