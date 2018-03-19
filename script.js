@@ -217,6 +217,14 @@ while (true) {
 					//printErr('Enemy factory [' + f.id + '] captured in ' + (count - 1) + ' turn(s)');
 				} else {
 					f.cyborgs = result;
+					possibleActions.push({
+						'name': 'attack enemy',
+						'actionFactory': undefined,
+						'targetFactory': f.id,
+						'cyborgs': f.cyborgs + f.production + 1,
+						'turnsEffect': count - 1,
+						'score': actionScore( f.production, f.cyborgs + f.production + 1, f.avgDist )
+					});
 				}
 			}
 			// Neutral factory
@@ -231,9 +239,25 @@ while (true) {
 					f.owner = -1;
 					f.cyborgs = Math.abs( result );
 					//printErr('Neutral factory [' + f.id + '] falls in ' + (count - 1) + ' turn(s)');
+					possibleActions.push({
+						'name': 'attack enemy',
+						'actionFactory': undefined,
+						'targetFactory': f.id,
+						'cyborgs': f.cyborgs + 1,
+						'turnsEffect': count - 1,
+						'score': actionScore( f.production, f.cyborgs + 1, f.avgDist )
+					});
 				}
 				else {
 					f.cyborgs = result;
+					possibleActions.push({
+						'name': 'capture neutral',
+						'actionFactory': undefined,
+						'targetFactory': f.id,
+						'cyborgs': f.cyborgs + 1,
+						'turnsEffect': count - 1,
+						'score': actionScore( f.production, f.cyborgs + 1, f.avgDist )
+					});
 				}
 			}
 			
@@ -242,53 +266,6 @@ while (true) {
 		}
 		simulation[count] = clone( simFactories );
 		count++;
-	}
-	
-	// Identify factories which will be neutral or enemy at the end of the simulation
-	var _afterSimNeutralFactories = [];
-	var _afterSimEnemyFactories = [];
-	for( var i=0; i < _factoryCount; i++ ){
-		if( simFactories[i].owner === -1 ){
-			_afterSimEnemyFactories.push( i );
-		}
-		else if( simFactories[i].owner === 0 ){
-			_afterSimNeutralFactories.push( i );
-		}
-	}
-	
-	// Compile attack possibilities of these neutral/enemy factories
-	// TODO: implement coordinated attacks from multiple factories
-	for( var i=0; i < _myFactories.length; i++ ){
-		var mf = _factories[_myFactories[i]];
-		for( var j=0; j < _afterSimNeutralFactories.length; j++ ){
-			var d = _distances.get( mf.id, _afterSimNeutralFactories[j] );
-			if( simulation[d] ){
-				var nf = simulation[d][_afterSimNeutralFactories[j]];
-				if( mf.cyborgs > nf.cyborgs ){
-					possibleActions.push({
-						'name': 'capture neutral',
-						'actionFactory': mf.id,
-						'targetFactory': nf.id,
-						'cyborgs': nf.cyborgs + 1,
-						'score': actionScore( nf.production, nf.cyborgs + 1, d )
-					});
-				}
-			}
-		}
-		for( var j=0; j < _afterSimEnemyFactories.length; j++ ){
-			var d = _distances.get( mf.id, _afterSimEnemyFactories[j] );
-			if( simulation[d] ){
-				var ef = simulation[d][_afterSimEnemyFactories[j]];
-				var cybs = Math.min( mf.cyborgs, ef.cyborgs + ef.production + 1 );
-				possibleActions.push({
-					'name': 'attack enemy',
-					'actionFactory': mf.id,
-					'targetFactory': ef.id,
-					'cyborgs': cybs,
-					'score': actionScore( ef.production, cybs, d  )
-				});
-			}
-		}
 	}
 	
 	// Evacuation/reinforcement & Increase production actions
@@ -368,33 +345,56 @@ while (true) {
 	
 	// Resolve actions
 	var actions = [];
-	var actionableFactories = _myFactories.slice();
+	var actionableFactories = {
+		'list': _myFactories.slice(),
+		'remove': function( id ){
+			var index = this.list.indexOf( id );
+			if( index >= 0 ){
+				this.list.splice( index, 1 );
+			}
+		}
+	}
 	var handledTargets = [];
-	while( actionableFactories.length > 0 && possibleActions.length > 0 ){
+	while( actionableFactories.list.length > 0 && possibleActions.length > 0 ){
 		var a = possibleActions.shift();
 		switch( a.name ){
 			case 'attack enemy':
 			case 'capture neutral':
+			case 'support ally':
 				if( handledTargets.indexOf( a.targetFactory ) < 0 ){
-					// Move command
-					actions.push( move( a.actionFactory, a.targetFactory, a.cyborgs ) );
-					// Remove actionFactory from actionables
-					if( _factories[a.actionFactory].cyborgs === 0 ){
-						actionableFactories.splice( actionableFactories.indexOf( a.actionFactory ), 1 );
+					// Potential actions factories
+					var pActionFactories = actionableFactories.list.slice();
+					var iotf = pActionFactories.indexOf( a.targetFactory );
+					if( iotf >= 0 ){
+						// Target factory cannot be action factory
+						pActionFactories.splice( iotf, 1 );
 					}
-					// Mark target factory handled
-					handledTargets.push( a.targetFactory );
+					// Action factories
+					var actionsFactories = findActionFactories( pActionFactories, a.targetFactory, a.turnsEffect, a.cyborgs );
+					if( actionsFactories.length > 0 ){
+						for( var i=0; i < actionsFactories.length; i++ ){
+							var af = actionsFactories[i];
+							// Move command
+							actions.push( move( af.id, a.targetFactory, af.cyborgs ) );
+							// Remove action factory from actionables
+							if( af.cyborgs === 0 ){
+								actionableFactories.remove( af.id );
+							}
+						}
+						// Mark target factory handled
+						handledTargets.push( a.targetFactory );
+					}
 				}
 				break;
 
 			case 'bomb enemy':
 				// Find closest factory
-				var actionFactory = findClosestMinCyborgs( actionableFactories, a.targetFactory, 0 );
+				var actionFactory = findClosestMinCyborgs( actionableFactories.list, a.targetFactory, 0 );
 				if( actionFactory >= 0 ){
 					// Bomb command
 					actions.push( bomb( actionFactory, a.targetFactory ) );
 					// Remove actionFactory from actionables
-					actionableFactories.splice( actionableFactories.indexOf( actionFactory ), 1 );
+					actionableFactories.remove( actionFactory );
 				}
 				break;
 
@@ -403,10 +403,12 @@ while (true) {
 				var myOtherFactories = _myFactories.slice();
 				myOtherFactories.splice( myOtherFactories.indexOf( a.actionFactory ), 1 );
 				var targetFactory = findClosest( myOtherFactories, a.actionFactory );
-				// Move command
-				actions.push( move( a.actionFactory, targetFactory, a.cyborgs ) );
-				// Remove actionFactory from actionables
-				actionableFactories.splice( actionableFactories.indexOf( a.actionFactory ), 1 );
+				if( targetFactory >= 0 ){
+					// Move command
+					actions.push( move( a.actionFactory, targetFactory, a.cyborgs ) );
+					// Remove actionFactory from actionables
+					actionableFactories.remove( a.actionFactory );
+				}
 				break;
 
 			case 'increase production':
@@ -414,7 +416,7 @@ while (true) {
 				actions.push( increaseProduction( a.actionFactory ) );
 				// Remove actionFactory from actionables
 				if( _factories[a.actionFactory].cyborgs === 0 ){
-					actionableFactories.splice( actionableFactories.indexOf( a.actionFactory ), 1 );
+					actionableFactories.remove( a.actionFactory );
 				}
 				break;
 
@@ -427,30 +429,7 @@ while (true) {
 				actions.push( move( a.actionFactory, a.targetFactory, a.cyborgs ) );
 				// Remove actionFactory from actionables
 				if( _factories[a.actionFactory].cyborgs === 0 ){
-					actionableFactories.splice( actionableFactories.indexOf( a.actionFactory ), 1 );
-				}
-				break;
-			
-			case 'support ally':
-				if( handledTargets.indexOf( a.targetFactory ) < 0 ){
-					// Find ally actionable factory at distance <= turnsEffect which has enough cyborgs to support
-					var otherFactories = actionableFactories.slice();
-					var iotf = otherFactories.indexOf( a.targetFactory );
-					if( iotf >= 0 ){
-						otherFactories.splice( iotf, 1 );
-					}
-					var actionFactory = findMaxDistanceMinCyborgs( otherFactories, a.targetFactory, a.turnsEffect, a.cyborgs );
-					if( actionFactory >= 0 ){
-						// Move command
-						actions.push( move( actionFactory, a.targetFactory, a.cyborgs ) );
-						// Remove actionFactory from actionables
-						if( _factories[actionFactory].cyborgs === 0 ){
-							actionableFactories.splice( actionableFactories.indexOf( actionFactory ), 1 );
-						}
-						// Mark target factory handled
-						handledTargets.push( a.targetFactory );
-					}
-					// TODO: else, find multiple actionable factories to support the needed amount
+					actionableFactories.remove( a.actionFactory );
 				}
 				break;
 		}
@@ -467,6 +446,35 @@ function actionScore( productionGain, cyborgsEngaged, distance ){
 	var cybDen = cyborgsEngaged > 0 ? cyborgsEngaged : 1;
 	var distDen = distance > 0 ? Math.pow( distance, 2 ) : 1;
 	return productionGain / cybDen / distDen;
+}
+
+function findActionFactories( ids, from, maxDistance, cyborgsNeeded ){
+	// Order list by asc distance first, then by desc number of cyborgs
+	var orderedIds = ids.sort( function(a, b){
+		var da = _distances.get(a, from);
+		var db = _distances.get(b, from);
+		if( da !== db ){
+			return da - db;
+		}
+		else {
+			return _factories[b].cyborgs - _factories[a].cyborgs;
+		}
+	});
+	
+	// Search for matching factories
+	var found = [];
+	for( var i=0; i < orderedIds.length; i++ ){
+		var d = _distances.get( orderedIds[i], from );
+		if( d > maxDistance ){ break; }
+		var cybs = Math.min( cyborgsNeeded, _factories[orderedIds[i]].cyborgs );
+		if( cybs > 0 ){
+			found.push( { 'id': orderedIds[i], 'cyborgs': cybs } );
+			cyborgsNeeded -= cybs;
+		}
+		if( cyborgsNeeded <= 0 ){ break; }
+	}
+	
+	return found;
 }
 
 function findMaxDistanceMinCyborgs( list, from, maxDistance, minCyborgs ){
