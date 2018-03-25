@@ -333,7 +333,8 @@ while (true) {
 		}
 		
 		// Increase production actions
-		if( f.cyborgs >= 10 && f.production < 3 ){
+		if( ( _myCyborgs >= _enemyCyborgs + 10 || _myProd < _enemyProd ) 
+				&& f.production < 3 && f.cyborgs >= 10 ){
 			possibleActions.push({
 				'name': 'increase production',
 				'actionFactory': f.id,
