@@ -1,3 +1,5 @@
+var _myCyborgs, _enemyCyborgs, _myProd, _enemyProd;
+
 // Factories
 var _factoryCount = parseInt(readline()); // the number of factories
 var _factories = {};
@@ -36,6 +38,10 @@ var _enemyBombLive = {
 // game loop
 while (true) {
 	// Init
+	_myCyborgs = 0;
+	_enemyCyborgs = 0;
+	_myProd = 0;
+	_enemyProd = 0;
 	_myFactories = [];
 	_enemyFactories = [];
 	_neutralFactories = [];
@@ -68,9 +74,13 @@ while (true) {
 			// IDs lists
 			if( f.owner === 1 ){
 				_myFactories.push( f.id );
+				_myCyborgs += f.cyborgs;
+				_myProd += f.production;
 			}
 			else if( f.owner === -1 ){
 				_enemyFactories.push( f.id );
+				_enemyCyborgs += f.cyborgs;
+				_enemyProd += f.production;
 			}
 			else {
 				_neutralFactories.push( f.id );
@@ -107,8 +117,22 @@ while (true) {
 			
 		// Troop inputs
 		else if( entityType === 'TROOP' ){
+			var t = {
+				'owner': arg1,
+				'src': arg2,
+				'dest': arg3,
+				'cyborgs': arg4,
+				'eta': arg5
+			};
 			var destFactory = _factories[arg3];
-			destFactory.incomings.add( arg5, arg4, arg1 === 1 );
+			destFactory.incomings.add( t.eta, t.cyborgs, t.owner === 1 );
+			
+			if( t.owner === 1 ){
+				_myCyborgs += t.cyborgs;
+			}
+			else if( t.owner === -1 ){
+				_enemyCyborgs += t.cyborgs;
+			}
 		}
 			
 		// Bomb inputs
@@ -309,7 +333,8 @@ while (true) {
 		}
 		
 		// Increase production actions
-		if( f.cyborgs >= 10 && f.production < 3 ){
+		if( ( _myCyborgs >= _enemyCyborgs + 10 || _myProd < _enemyProd ) 
+				&& f.production < 3 && f.cyborgs >= 10 ){
 			possibleActions.push({
 				'name': 'increase production',
 				'actionFactory': f.id,
